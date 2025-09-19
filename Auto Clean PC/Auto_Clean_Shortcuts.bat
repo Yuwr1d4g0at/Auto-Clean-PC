@@ -1,11 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
 
-rem Set the desktop path to scan
-set "desktopPath=C:\Users\Rodri\OneDrive\Ambiente de Trabalho"
+rem Get the current user's desktop path
+set "desktopPath=%USERPROFILE%\Desktop"
 
-rem Set the file for the log output
-set "logFile=DeletedInvalidShortcutsLog.txt"
+rem Set the log file path to Documents
+set "logFile=%USERPROFILE%\Documents\DeletedInvalidShortcutsLog.txt"
 
 rem Append log header with date and time
 >> "%logFile%" echo ----------------------------------------
@@ -15,17 +15,23 @@ rem Append log header with date and time
 rem Loop through all shortcut (.lnk) files in the desktopPath and its subfolders
 for /r "%desktopPath%" %%i in (*.lnk) do (
     rem Use PowerShell to get target path of the shortcut
+    set "targetPath="
     for /f "usebackq delims=" %%t in (`powershell -NoProfile -Command ^
         "$sh = New-Object -ComObject WScript.Shell; $sc = $sh.CreateShortcut('%%i'); $sc.TargetPath"`) do (
         set "targetPath=%%t"
     )
 
-    rem Check if targetPath exists (file or folder)
-    if not exist "!targetPath!" (
-        rem Log deleted shortcut
-        echo Deleting invalid shortcut: %%~fi >> "%logFile%"
-        rem Delete the shortcut
-        del /f "%%~fi"
+    rem Check if targetPath is not empty and does not exist
+    if defined targetPath (
+        if not exist "!targetPath!" (
+            rem Log deleted shortcut
+            echo Deleting invalid shortcut: %%~fi >> "%logFile%"
+            rem Delete the shortcut (Use quotes for safety)
+            del /f "%%~fi"
+        )
+    ) else (
+        rem Log shortcut with no target path
+        echo Skipped (no target): %%~fi >> "%logFile%"
     )
 )
 
